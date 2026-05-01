@@ -1,0 +1,80 @@
+<div class="p-6 bg-slate-50 min-h-screen">
+  <header class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900">TestLab QA Dashboard</h1>
+    <p class="text-slate-500">Real-time quality metrics and build history</p>
+  </header>
+
+  <!-- Metric Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+      <h3 class="text-slate-500 text-sm font-medium mb-2">Overall Pass Rate</h3>
+      <div class="flex items-end gap-2">
+        <span class="text-3xl font-bold" [ngClass]="(latestRun()?.passedTests || 0) / (latestRun()?.totalTests || 1) >= 0.8 ? 'text-emerald-600' : 'text-rose-600'">
+          {{ (latestRun()?.passedTests || 0) / (latestRun()?.totalTests || 1) | percent }}
+        </span>
+      </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+      <h3 class="text-slate-500 text-sm font-medium mb-2">Code Coverage</h3>
+      <div class="flex items-end gap-2">
+        <span class="text-3xl font-bold" [ngClass]="(latestRun()?.coveragePercentage || 0) >= 80 ? 'text-emerald-600' : 'text-amber-500'">
+          {{ latestRun()?.coveragePercentage | number:'1.1-1' }}%
+        </span>
+      </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+      <h3 class="text-slate-500 text-sm font-medium mb-2">Total Tests</h3>
+      <div class="flex items-end gap-2">
+        <span class="text-3xl font-bold text-slate-900">{{ latestRun()?.totalTests }}</span>
+        <span class="text-slate-400 mb-1">tests</span>
+      </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+      <h3 class="text-slate-500 text-sm font-medium mb-2">Last Build</h3>
+      <div class="flex items-end gap-2">
+        <span class="text-lg font-bold text-slate-900">{{ latestRun()?.timestamp | date:'shortTime' }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+      <h3 class="text-slate-900 font-bold mb-4">Build History (Pass Rate)</h3>
+      <div class="h-64">
+        <canvas baseChart
+                [data]="lineChartData"
+                [options]="lineChartOptions"
+                [type]="'line'">
+        </canvas>
+      </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+      <h3 class="text-slate-900 font-bold mb-4">Recent Failures</h3>
+      <div class="overflow-auto max-h-64">
+        <table class="w-full text-left text-sm">
+          <thead class="text-slate-500 border-b">
+            <tr>
+              <th class="pb-2">Test Name</th>
+              <th class="pb-2">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            <tr *ngFor="let run of history()" class="hover:bg-slate-50">
+              <td class="py-2">Build #{{ run.id }}</td>
+              <td class="py-2">
+                <span [ngClass]="run.status === 'PASSED' ? 'text-emerald-600' : 'text-rose-600'" class="font-medium">
+                  {{ run.status }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
