@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation
+    url: https://github.com/JOSEDAVID200213/testlab-qa#readme
+    about: Check the README for setup instructions, API reference, and testing guides.
+  - name: 🔒 Security Policy
+    url: https://github.com/JOSEDAVID200213/testlab-qa/blob/main/SECURITY.md
+    about: Read our security policy for responsible vulnerability disclosure.

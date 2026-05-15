@@ -1,22 +1,24 @@
-# 🧪 TestLab — Professional QA Platform
+# 🧪 TestLab — Professional QA & DevSecOps Platform
 
 ![CI Pipeline](https://github.com/JOSEDAVID200213/testlab-qa/actions/workflows/ci.yml/badge.svg)
+![Release](https://github.com/JOSEDAVID200213/testlab-qa/actions/workflows/release.yml/badge.svg)
 ![Coverage](https://img.shields.io/badge/coverage-80%25-green?style=flat-square)
+![Security](https://img.shields.io/badge/security-OWASP%20%2B%20Trivy-blue?style=flat-square)
 ![Java](https://img.shields.io/badge/Java_21-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring_Boot_3.2-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)
 ![Angular](https://img.shields.io/badge/Angular_17+-DD0031?style=for-the-badge&logo=angular&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-45ba4b?style=for-the-badge&logo=playwright&logoColor=white)
 ![k6](https://img.shields.io/badge/k6-7D64FF?style=for-the-badge&logo=k6&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![OWASP](https://img.shields.io/badge/OWASP-000000?style=for-the-badge&logo=owasp&logoColor=white)
+![Trivy](https://img.shields.io/badge/Trivy-1904DA?style=for-the-badge&logo=aqua&logoColor=white)
 
-A full-stack project demonstrating **professional-grade software testing**
-across 5 levels: unit, integration, architecture, E2E, and performance.
-Built on a real inventory management API in Java + Spring Boot, with a
-live QA dashboard in Angular that visualizes coverage, test history, and
-performance metrics.
+A full-stack project demonstrating **professional-grade software testing and DevSecOps practices**
+across 5 testing levels plus automated security scanning and release management. Built on a real
+inventory management API in Java + Spring Boot, with a live QA dashboard in Angular.
 
 > This project is not about the inventory system — it is about demonstrating
-> every layer of a production testing strategy that most developers skip.
+> every layer of a **production testing + security strategy** that most developers skip.
 
 ![TestLab Dashboard Preview](./docs/preview.png)
 
@@ -35,6 +37,54 @@ Most projects have unit tests. Few have all of this working together:
 | 5 — Performance | k6 | API holds up under load, stress and spike traffic |
 
 Every level runs automatically on every push via **GitHub Actions**.
+
+---
+
+## 🔒 Security & DevSecOps
+
+Security is not an afterthought — it's embedded in every stage of the pipeline.
+
+### Automated Security Scanning
+
+| Tool | What it Scans | Fail Criteria |
+|---|---|---|
+| **OWASP Dependency-Check** | Java/Maven dependencies for known CVEs | CVSS score ≥ 7.0 |
+| **Trivy** | Docker images (backend + frontend) | Any CRITICAL or HIGH vulnerability |
+| **Spring Security** | Runtime API protection | Unauthorized access blocked |
+| **ArchUnit** | Code patterns that could introduce vulnerabilities | Violations fail the build |
+
+### Vulnerability Management Workflow
+
+```
+ ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+ │  Discovery   │───▶│   Triage     │───▶│ Remediation  │───▶│  Verified    │
+ │              │    │              │    │              │    │              │
+ │ OWASP/Trivy  │    │ CVSS Scoring │    │ Fix + PR     │    │ CI re-scan   │
+ │ finds a CVE  │    │ Impact check │    │ Suppression? │    │ All green ✅ │
+ └──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘
+```
+
+### Issue Templates
+
+The project includes structured templates for **incident management** (similar to Jira workflows):
+
+- 🐛 **Bug Report** — Severity, component, steps to reproduce, environment
+- 🔒 **Security Vulnerability** — CVE ID, CVSS score, impact assessment, remediation plan
+
+### Running Security Scans Locally
+
+```bash
+# Scan dependencies for known CVEs
+cd backend
+mvn dependency-check:check
+open target/dependency-check/dependency-check-report.html
+
+# Scan Docker images
+docker build -t testlab-backend:local ./backend
+trivy image testlab-backend:local
+```
+
+See [SECURITY.md](./SECURITY.md) for the full security policy, response SLAs, and reporting guidelines.
 
 ---
 
@@ -94,15 +144,25 @@ TESTING PYRAMID
 | Playwright + TypeScript | E2E | Browser automation, 3 engines |
 | k6 | Performance | Load, stress, spike testing |
 
-**Frontend & CI**
+**Security & DevSecOps**
+
+| Technology | Purpose |
+|---|---|
+| OWASP Dependency-Check | CVE scanning for Java dependencies |
+| Trivy | Container image vulnerability scanning |
+| Spring Security | API authentication and authorization |
+| GitHub Issue Templates | Structured incident & vulnerability management |
+
+**Frontend & CI/CD**
 
 | Technology | Purpose |
 |---|---|
 | Angular 17+ + Signals | QA metrics dashboard |
 | Chart.js + ng2-charts | Coverage and history charts |
 | TailwindCSS | Styling |
-| GitHub Actions | CI pipeline (4 stages) |
+| GitHub Actions | CI/CD pipeline (6 stages + quality gate) |
 | Docker Compose | Local environment |
+| Semantic Versioning | Automated release management |
 
 ---
 
@@ -115,6 +175,7 @@ TESTING PYRAMID
 - [Maven 3.9+](https://maven.apache.org/)
 - [Node.js 20+](https://nodejs.org/)
 - [k6](https://k6.io/docs/getting-started/installation/) (for performance tests)
+- [Trivy](https://aquasecurity.github.io/trivy) (for local security scans)
 
 ### 1. Clone the repository
 
@@ -257,31 +318,62 @@ Every push to `main` and every pull request triggers this pipeline:
 
 ```
 
-push to main
+push to main / PR
 │
 ▼
-┌─────────────┐
-│ unit-tests  │  mvn test -Dgroups="unit" + JaCoCo report
-└──────┬──────┘
-│ needs: unit-tests
-▼
-┌──────────────────┐
-│ integration-tests│  mvn test -Dgroups="integration" + Testcontainers
-└────────┬─────────┘
-│ needs: integration-tests (parallel)
-┌────┴────┐
-▼         ▼
-┌────────┐ ┌─────────────────┐
-│  e2e   │ │ performance-    │
-│ tests  │ │ smoke           │
-│        │ │                 │
-│Playwright│ │k6 smoke-test  │
-└────────┘ └─────────────────┘
+┌─────────────────┐
+│  build + unit   │  mvn test -Dgroups="unit" + JaCoCo
+│     tests       │
+└────────┬────────┘
+         │ needs: build
+    ┌────┴────────────────────┐
+    ▼                         ▼
+┌──────────────┐    ┌────────────────────┐
+│ integration  │    │ security scans     │
+│   tests      │    │                    │
+│              │    │ ├─ OWASP Dep-Check │
+│ Testcontainers│   │ └─ Trivy (Docker)  │
+└──────┬───────┘    └────────┬───────────┘
+       │                     │
+  ┌────┴────┐                │
+  ▼         ▼                │
+┌────────┐ ┌──────────┐      │
+│  e2e   │ │ perf     │      │
+│ tests  │ │ smoke    │      │
+│        │ │          │      │
+│Playwright│ │k6       │     │
+└────┬───┘ └────┬─────┘      │
+     │          │             │
+     └──────────┴─────────────┘
+                │
+                ▼
+        ┌───────────────┐
+        │ Quality Gate  │  All stages must pass ✅
+        │               │
+        │ Ready for     │
+        │ release       │
+        └───────────────┘
 
 ```
 
-Artifacts uploaded per run:
+### Release Pipeline
+
+When a version tag is pushed (`v1.0.0`), a separate release workflow:
+
+1. ✅ Builds and packages the `.jar`
+2. ✅ Builds Docker images with version tags
+3. ✅ Generates a changelog from git commits
+4. ✅ Creates a **GitHub Release** with the `.jar` as downloadable asset
+
+```bash
+# Create a release:
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+### Artifacts per CI run:
 - JaCoCo HTML coverage report
+- OWASP Dependency-Check HTML report
 - Playwright HTML report + failure screenshots + videos
 - k6 summary JSON
 
@@ -328,10 +420,18 @@ testlab/
 │       │   └── performance/          k6 results
 │       └── core/services/
 │
-├── .github/workflows/
-│   └── ci.yml                        GitHub Actions pipeline
+├── .github/
+│   ├── workflows/
+│   │   ├── ci.yml                    CI pipeline (6 stages + quality gate)
+│   │   └── release.yml               Automated release on version tags
+│   └── ISSUE_TEMPLATE/
+│       ├── bug_report.yml            Structured bug reporting
+│       ├── security_vulnerability.yml CVE/vulnerability tracking
+│       └── config.yml                Template configuration
+│
 ├── docker-compose.yml                Dev environment
-└── docker-compose.test.yml           Test environment
+├── docker-compose.test.yml           Test environment
+└── SECURITY.md                       Security policy & SLAs
 ```
 
 ---

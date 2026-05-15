@@ -1,4 +1,4 @@
-name: TestLab CI
+name: TestLab CI/CD
 
 on:
   push:
@@ -7,6 +7,9 @@ on:
     branches: [main]
 
 jobs:
+  # ──────────────────────────────────────────────
+  # Stage 1: Build + Unit Tests
+  # ──────────────────────────────────────────────
   build-and-unit-tests:
     runs-on: ubuntu-latest
     steps:
@@ -25,6 +28,9 @@ jobs:
           name: jacoco-report
           path: backend/target/site/jacoco/
 
+  # ──────────────────────────────────────────────
+  # Stage 2: Integration Tests (needs unit tests)
+  # ──────────────────────────────────────────────
   integration-tests:
     runs-on: ubuntu-latest
     needs: build-and-unit-tests
@@ -44,6 +50,61 @@ jobs:
           name: integration-test-results
           path: backend/target/surefire-reports/
 
+  # ──────────────────────────────────────────────
+  # Stage 3a: Security Scan — Dependencies (OWASP)
+  # ──────────────────────────────────────────────
+  security-dependency-scan:
+    runs-on: ubuntu-latest
+    needs: build-and-unit-tests
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+      - name: OWASP Dependency-Check
+        run: mvn dependency-check:check -f backend/pom.xml
+      - name: Upload Dependency-Check Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-check-report
+          path: backend/target/dependency-check/
+
+  # ──────────────────────────────────────────────
+  # Stage 3b: Security Scan — Docker Images (Trivy)
+  # ──────────────────────────────────────────────
+  security-container-scan:
+    runs-on: ubuntu-latest
+    needs: build-and-unit-tests
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Backend Docker Image
+        run: docker build -t testlab-backend:scan ./backend
+      - name: Trivy Scan — Backend Image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: 'testlab-backend:scan'
+          format: 'table'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+      - name: Build Frontend Docker Image
+        run: docker build -t testlab-frontend:scan ./frontend
+      - name: Trivy Scan — Frontend Image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: 'testlab-frontend:scan'
+          format: 'table'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+
+  # ──────────────────────────────────────────────
+  # Stage 4a: E2E Tests (Playwright)
+  # ──────────────────────────────────────────────
   e2e-tests:
     runs-on: ubuntu-latest
     needs: integration-tests
@@ -52,27 +113,48 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Install dependencies
+      - name: Install Playwright dependencies
         run: |
           cd e2e
           npm install
           npx playwright install --with-deps
-      - name: Run E2E Tests
+      - name: Start full stack with Docker Compose
         run: |
-          docker-compose up -d db
-          # Start backend in background (simplified)
-          # cd backend && mvn spring-boot:run &
-          # Start frontend (simplified)
-          # cd frontend && npm start &
-          # wait-on http://localhost:4200
-          cd e2e && npx playwright test
+          docker-compose up -d --build
+          echo "Waiting for services to be ready..."
+          # Wait for backend health
+          for i in $(seq 1 30); do
+            if curl -s http://localhost:8080/api/products > /dev/null 2>&1; then
+              echo "Backend is ready!"
+              break
+            fi
+            echo "Waiting for backend... ($i/30)"
+            sleep 5
+          done
+          # Wait for frontend
+          for i in $(seq 1 20); do
+            if curl -s http://localhost:4200 > /dev/null 2>&1; then
+              echo "Frontend is ready!"
+              break
+            fi
+            echo "Waiting for frontend... ($i/20)"
+            sleep 3
+          done
+      - name: Run E2E Tests
+        run: cd e2e && npx playwright test
       - name: Upload Playwright Report
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: playwright-report
           path: e2e/playwright-report/
+      - name: Tear down Docker Compose
+        if: always()
+        run: docker-compose down -v
 
+  # ──────────────────────────────────────────────
+  # Stage 4b: Performance Smoke Test (k6)
+  # ──────────────────────────────────────────────
   performance-smoke:
     runs-on: ubuntu-latest
     needs: integration-tests
@@ -80,5 +162,34 @@ jobs:
       - uses: actions/checkout@v4
       - name: Setup k6
         uses: grafana/setup-k6-action@v1
+      - name: Start backend for performance test
+        run: |
+          docker-compose up -d db backend
+          for i in $(seq 1 30); do
+            if curl -s http://localhost:8080/api/products > /dev/null 2>&1; then
+              echo "Backend is ready!"
+              break
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 5
+          done
       - name: Run Smoke Test
         run: k6 run performance/scripts/smoke-test.js
+      - name: Tear down
+        if: always()
+        run: docker-compose down -v
+
+  # ──────────────────────────────────────────────
+  # Stage 5: Quality Gate — All checks must pass
+  # ──────────────────────────────────────────────
+  quality-gate:
+    runs-on: ubuntu-latest
+    needs:
+      - integration-tests
+      - security-dependency-scan
+      - security-container-scan
+      - e2e-tests
+      - performance-smoke
+    steps:
+      - name: "✅ All quality and security checks passed"
+        run: echo "All CI stages passed — code is ready for release."
