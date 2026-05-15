@@ -12,8 +12,9 @@
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![OWASP](https://img.shields.io/badge/OWASP-000000?style=for-the-badge&logo=owasp&logoColor=white)
 ![Trivy](https://img.shields.io/badge/Trivy-1904DA?style=for-the-badge&logo=aqua&logoColor=white)
+![ITIL v4](https://img.shields.io/badge/ITIL_v4-002E5F?style=for-the-badge&logo=axelos&logoColor=white)
 
-A full-stack project demonstrating **professional-grade software testing and DevSecOps practices**
+A full-stack project demonstrating **professional-grade software testing, DevSecOps, and ITIL v4 Service Management**
 across 5 testing levels plus automated security scanning and release management. Built on a real
 inventory management API in Java + Spring Boot, with a live QA dashboard in Angular.
 
@@ -431,7 +432,8 @@ testlab/
 │
 ├── docker-compose.yml                Dev environment
 ├── docker-compose.test.yml           Test environment
-└── SECURITY.md                       Security policy & SLAs
+├── SECURITY.md                       Security policy & SLAs
+└── INCIDENT_MANAGEMENT.md            ITIL v4 Incident Framework
 ```
 
 ---
