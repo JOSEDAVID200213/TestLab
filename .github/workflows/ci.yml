@@ -65,7 +65,7 @@ jobs:
           distribution: 'temurin'
           cache: maven
       - name: OWASP Dependency-Check
-        continue-on-error: true
+        continue-on-error: false
         run: >
           mvn dependency-check:check
           -DfailBuildOnCVSS=7
