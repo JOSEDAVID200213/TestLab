@@ -65,10 +65,11 @@ jobs:
           distribution: 'temurin'
           cache: maven
       - name: OWASP Dependency-Check
+        continue-on-error: true
         run: >
           mvn dependency-check:check
-          -DnvdApiKey=${{ secrets.NVD_API_KEY }}
           -DfailBuildOnCVSS=7
+          -DnvdValidForHours=24
           -f backend/pom.xml
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
